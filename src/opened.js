@@ -1,5 +1,6 @@
 import { ABI } from './shared/abi.js';
 import { makeProvider, makeContract } from './shared/provider.js';
+import { upsertOpenedEvent } from './shared/db.js';
 import { logInfo, logErr } from './shared/logger.js';
 
 const TAG = 'Opened';
@@ -12,13 +13,21 @@ async function main() {
 
   contract.on(
     'Opened',
-    (id, state, asset, longSide, lots, entryOrTargetX6, slX6, tpX6, liqX6, trader, leverageX, evt) => {
-      const traderLc = String(trader).toLowerCase();
-      logInfo(
-        TAG,
-        `id=${id} state=${state} asset=${asset} long=${longSide} lots=${lots} entryOrTargetX6=${entryOrTargetX6} slX6=${slX6} tpX6=${tpX6} liqX6=${liqX6} trader=${traderLc} lev=${leverageX}`,
-        `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
-      );
+    async (id, state, asset, longSide, lots, entryOrTargetX6, slX6, tpX6, liqX6, trader, leverageX, evt) => {
+      try {
+        await upsertOpenedEvent({
+          id, state, asset, longSide, lots,
+          entryOrTargetX6, slX6, tpX6, liqX6,
+          trader, leverageX
+        });
+        logInfo(
+          TAG,
+          `stored id=${id} state=${state} asset=${asset} lots=${lots}`,
+          `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
+        );
+      } catch (e) {
+        logErr(TAG, 'upsertOpenedEvent failed:', e.message || e);
+      }
     }
   );
 }
