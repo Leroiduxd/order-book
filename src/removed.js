@@ -1,5 +1,6 @@
 import { ABI } from './shared/abi.js';
 import { makeProvider, makeContract } from './shared/provider.js';
+import { handleRemovedEvent } from './shared/db.js';
 import { logInfo, logErr } from './shared/logger.js';
 
 const TAG = 'Removed';
@@ -10,12 +11,17 @@ async function main() {
 
   logInfo(TAG, 'listening…');
 
-  contract.on('Removed', (id, reason, execX6, pnlUsd6, evt) => {
-    logInfo(
-      TAG,
-      `id=${id} reason=${reason} execX6=${execX6} pnlUsd6=${pnlUsd6}`,
-      `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
-    );
+  contract.on('Removed', async (id, reason, execX6, pnlUsd6, evt) => {
+    try {
+      await handleRemovedEvent({ id, reason, execX6, pnlUsd6 });
+      logInfo(
+        TAG,
+        `stored id=${id} reason=${reason} execX6=${execX6} pnlUsd6=${pnlUsd6}`,
+        `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
+      );
+    } catch (e) {
+      logErr(TAG, 'handleRemovedEvent failed:', e.message || e);
+    }
   });
 }
 
