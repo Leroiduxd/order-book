@@ -159,3 +159,90 @@ export async function handleExecutedEvent(ev) {
 
   logInfo('DB', `Executed applied id=${id} entryX6=${entryX6} (order_buckets cleaned)`);
 }
+/** ==============================================
+ *  MàJ quand on reçoit StopsUpdated
+ *  ============================================== */
+export async function handleStopsUpdatedEvent(ev) {
+  const { id, slX6, tpX6 } = ev;
+
+  // Récupère la position pour trouver l'asset_id
+  const { data: pos, error: posErr } = await supabase
+    .from('positions')
+    .select('asset_id')
+    .eq('id', Number(id))
+    .maybeSingle();
+  if (posErr) throw posErr;
+  if (!pos) throw new Error(`Position ${id} introuvable pour StopsUpdated`);
+
+  const asset_id = pos.asset_id;
+  const asset = await getAsset(asset_id);
+  const tick = BI(asset.tick_size_usd6);
+
+  // MàJ des stops dans positions
+  const { error: upErr } = await supabase
+    .from('positions')
+    .update({
+      sl_x6: String(slX6),
+      tp_x6: String(tpX6)
+    })
+    .eq('id', Number(id));
+  if (upErr) throw upErr;
+
+  // Supprime anciens stops dans stop_buckets
+  const { error: delErr } = await supabase
+    .from('stop_buckets')
+    .delete()
+    .eq('position_id', Number(id));
+  if (delErr) throw delErr;
+
+  // Réinsère si sl / tp non nuls
+  if (Number(slX6) !== 0) {
+    const bucket_id = divFloor(BI(slX6), tick).toString();
+    await supabase.from('stop_buckets').insert({
+      asset_id,
+      bucket_id,
+      position_id: Number(id),
+      stop_type: 1
+    }).select().maybeSingle();
+  }
+  if (Number(tpX6) !== 0) {
+    const bucket_id = divFloor(BI(tpX6), tick).toString();
+    await supabase.from('stop_buckets').insert({
+      asset_id,
+      bucket_id,
+      position_id: Number(id),
+      stop_type: 2
+    }).select().maybeSingle();
+  }
+
+  logInfo('DB', `StopsUpdated id=${id} slX6=${slX6} tpX6=${tpX6}`);
+}
+
+
+/** ==============================================
+ *  MàJ quand on reçoit Removed
+ *  ============================================== */
+export async function handleRemovedEvent(ev) {
+  const { id, reason, execX6, pnlUsd6 } = ev;
+
+  // Met la position en state=2 (fermée)
+  const { error: upErr } = await supabase
+    .from('positions')
+    .update({
+      state: 2,
+      close_reason: Number(reason),
+      exec_x6: String(execX6),
+      pnl_usd6: String(pnlUsd6)
+    })
+    .eq('id', Number(id));
+  if (upErr) throw upErr;
+
+  // Supprime ses entrées dans stop_buckets
+  const { error: delErr } = await supabase
+    .from('stop_buckets')
+    .delete()
+    .eq('position_id', Number(id));
+  if (delErr) throw delErr;
+
+  logInfo('DB', `Removed id=${id} reason=${reason} execX6=${execX6} pnlUsd6=${pnlUsd6}`);
+}
