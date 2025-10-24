@@ -1,5 +1,6 @@
 import { ABI } from './shared/abi.js';
 import { makeProvider, makeContract } from './shared/provider.js';
+import { handleStopsUpdatedEvent } from './shared/db.js';
 import { logInfo, logErr } from './shared/logger.js';
 
 const TAG = 'StopsUpdated';
@@ -10,12 +11,17 @@ async function main() {
 
   logInfo(TAG, 'listening…');
 
-  contract.on('StopsUpdated', (id, slX6, tpX6, evt) => {
-    logInfo(
-      TAG,
-      `id=${id} slX6=${slX6} tpX6=${tpX6}`,
-      `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
-    );
+  contract.on('StopsUpdated', async (id, slX6, tpX6, evt) => {
+    try {
+      await handleStopsUpdatedEvent({ id, slX6, tpX6 });
+      logInfo(
+        TAG,
+        `stored id=${id} slX6=${slX6} tpX6=${tpX6}`,
+        `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
+      );
+    } catch (e) {
+      logErr(TAG, 'handleStopsUpdatedEvent failed:', e.message || e);
+    }
   });
 }
 
