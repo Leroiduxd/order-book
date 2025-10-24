@@ -10,19 +10,20 @@ async function main() {
 
   logInfo(TAG, 'listening…');
 
-  contract.on('Opened', (id, state, asset, longSide, lots, entryOrTargetX6, slX6, tpX6, liqX6, trader, leverageX, evt) => {
-    const traderLc = String(trader).toLowerCase();
-
-    logInfo(
-      TAG,
-      `id=${id} state=${state} asset=${asset} long=${longSide} lots=${lots} entryOrTargetX6=${entryOrTargetX6} slX6=${slX6} tpX6=${tpX6} liqX6=${liqX6} trader=${traderLc} lev=${leverageX}`,
-      `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
-    );
-  });
+  contract.on(
+    'Opened',
+    (id, state, asset, longSide, lots, entryOrTargetX6, slX6, tpX6, liqX6, trader, leverageX, evt) => {
+      const traderLc = String(trader).toLowerCase();
+      logInfo(
+        TAG,
+        `id=${id} state=${state} asset=${asset} long=${longSide} lots=${lots} entryOrTargetX6=${entryOrTargetX6} slX6=${slX6} tpX6=${tpX6} liqX6=${liqX6} trader=${traderLc} lev=${leverageX}`,
+        `@ block=${evt.blockNumber} tx=${evt.transactionHash} logIndex=${evt.logIndex}`
+      );
+    }
+  );
 }
 
-main().catch(e => {
+main().catch((e) => {
   logErr(TAG, e);
   process.exit(1);
 });
-
