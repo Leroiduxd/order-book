@@ -1,0 +1,17 @@
+{
+  "name": "brokex-event-listeners",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "ethers": "^6.13.2",
+    "dotenv": "^16.4.5"
+  },
+  "scripts": {
+    "opened": "node src/opened.js",
+    "executed": "node src/executed.js",
+    "stops": "node src/stopsUpdated.js",
+    "removed": "node src/removed.js",
+    "all": "bash run-all.sh"
+  }
+}
